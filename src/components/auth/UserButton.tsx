@@ -35,7 +35,7 @@ export function UserButton({ user }: UserButtonProps) {
       <DropdownMenuTrigger className="outline-none">
         <Avatar>
           <AvatarImage src={user.image || ""} />
-          <AvatarFallback className="bg-black text-white">
+          <AvatarFallback className="bg-black text-white text-base">
             {initials}
           </AvatarFallback>
         </Avatar>
@@ -52,9 +52,9 @@ export function UserButton({ user }: UserButtonProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => signOut()}
-          className="cursor-pointer text-red-600 focus:text-red-600"
+          className="cursor-pointer font-semibold text-red-600 focus:text-red-700"
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="mr-2 h-4 w-4 text-red-600" />
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
