@@ -1,21 +1,24 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { posts } from "@/db/schema";
-import { desc } from "drizzle-orm";
 import { PostCard } from "@/components/posts/PostCard";
 import { PostOptions } from "@/components/posts/PostOptions";
 import Link from "next/link";
 
 export default async function Home() {
   const session = await auth();
-  const userId = session?.user?.id; // 1. Extract userId specifically
+  const userId = session?.user?.id;
 
-  // Used db.query to easily include the author relation
   const allPosts = await db.query.posts.findMany({
-    orderBy: [desc(posts.createdAt)],
     with: {
       author: true,
+      comments: {
+        with: { author: true },
+        // Sort comments by newest
+        orderBy: (comments, { desc }) => [desc(comments.createdAt)],
+      },
     },
+    // Sort posts by newest
+    orderBy: (posts, { desc }) => [desc(posts.createdAt)],
   });
 
   return (
@@ -31,15 +34,15 @@ export default async function Home() {
         </p>
       </div>
 
-      {/* 2. Render Posts Grid */}
       {allPosts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {allPosts.map((post) => (
-            // 3. WRAPPER DIV: Needed for positioning and grouping
             <div key={post.id} className="relative group h-full">
-              <PostCard post={post} />
+              {/* PostCard now accepts currentUserId 
+                  and the post object includes comments from the query above 
+              */}
+              <PostCard post={post} currentUserId={userId} />
 
-              {/* 4. POST OPTIONS: Only show if current user is the author */}
               {userId === post.authorId && (
                 <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full shadow-sm">
                   <PostOptions
@@ -54,7 +57,6 @@ export default async function Home() {
           ))}
         </div>
       ) : (
-        /* Empty State */
         <div className="text-center py-20 bg-white rounded-lg border-2 border-dashed">
           <p className="text-gray-600 mb-4">No stories yet.</p>
           {userId && (
