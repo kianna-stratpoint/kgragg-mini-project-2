@@ -5,8 +5,8 @@ import { eq, desc } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { PostCard } from "@/components/posts/PostCard"; // 1. Reuse your component
-import { PostOptions } from "@/components/posts/PostOptions"; // 2. Import options
+import { PostCard } from "@/components/posts/PostCard";
+import { PostOptions } from "@/components/posts/PostOptions";
 
 export default async function MyBlogsPage() {
   const session = await auth();
@@ -22,9 +22,13 @@ export default async function MyBlogsPage() {
   const userPosts = await db.query.posts.findMany({
     where: eq(posts.authorId, userId),
     with: {
-      author: true, // Required by PostCard
-      comments: true, // Required for Stats
-      reactions: true, // Required for Stats
+      author: true,
+      // FIX: We must fetch the author of the comments for PostCard to work
+      comments: {
+        with: { author: true },
+        orderBy: (comments, { desc }) => [desc(comments.createdAt)],
+      },
+      reactions: true,
     },
     orderBy: [desc(posts.createdAt)],
   });
@@ -98,12 +102,11 @@ export default async function MyBlogsPage() {
             <div key={post.id} className="relative group">
               {/* 1. The Reused Card Component */}
               <div className="h-full">
-                <PostCard post={post} />
+                {/* Passed currentUserId so comments sidebar works here too */}
+                <PostCard post={post} currentUserId={userId} />
               </div>
 
-              {/* 2. The Edit/Delete Menu (Overlay) 
-                  Positioned absolute so it sits ON TOP of the card 
-              */}
+              {/* 2. The Edit/Delete Menu (Overlay) */}
               <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full shadow-sm">
                 <PostOptions
                   postId={post.id}

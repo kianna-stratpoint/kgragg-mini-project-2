@@ -6,12 +6,12 @@ import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { UserAvatar } from "@/components/auth/UserAvatar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { auth } from "@/auth";
 import { PostOptions } from "@/components/posts/PostOptions";
+import { BackLink } from "@/components/layout/BackLink";
+// 1. IMPORT THE COMMENT SIDEBAR
+import { CommentSidebar } from "@/components/comments/CommentSidebar";
 
-// 1. Update the Interface: params is now a Promise
 interface BlogPostPageProps {
   params: Promise<{
     slug: string;
@@ -20,14 +20,17 @@ interface BlogPostPageProps {
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const session = await auth();
-  // 2. Await the params to get the slug
   const { slug } = await params;
 
-  // 3. Fetch the post using the unwrapped slug
+  // 2. UPDATE QUERY TO FETCH COMMENTS
   const post = await db.query.posts.findFirst({
     where: eq(posts.slug, slug),
     with: {
       author: true,
+      comments: {
+        with: { author: true }, // We need the comment author info
+        orderBy: (comments, { desc }) => [desc(comments.createdAt)], // Newest first
+      },
     },
   });
 
@@ -41,13 +44,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       <div className="bg-white">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="mb-6">
-            <Link
-              href="/"
-              className="inline-flex items-center text-sm text-gray-500 hover:text-black transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Posts
-            </Link>
+            <BackLink />
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold font-playfair-display text-gray-900 mb-6 leading-tight">
@@ -76,17 +73,24 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Add the Options Menu Here */}
-              <PostOptions
+              {/* 3. ADD THE COMMENT SIDEBAR HERE */}
+              <CommentSidebar
                 postId={post.id}
                 slug={post.slug}
-                authorId={post.authorId}
+                comments={post.comments}
                 currentUserId={session?.user?.id}
               />
 
               <Button variant="ghost" size="sm" className="text-gray-500">
                 Share
               </Button>
+
+              <PostOptions
+                postId={post.id}
+                slug={post.slug}
+                authorId={post.authorId}
+                currentUserId={session?.user?.id}
+              />
             </div>
           </div>
         </div>
