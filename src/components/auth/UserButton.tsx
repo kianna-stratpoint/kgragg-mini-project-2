@@ -10,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/auth/UserAvatar";
 
 interface UserButtonProps {
   user: {
@@ -21,23 +22,14 @@ interface UserButtonProps {
 }
 
 export function UserButton({ user }: UserButtonProps) {
-  // Get initials for fallback (e.g., "John Doe" -> "JD")
-  const initials = user.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-    : "U";
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="outline-none">
         <Avatar>
-          <AvatarImage src={user.image || ""} />
-          <AvatarFallback className="bg-black text-white text-base">
-            {initials}
-          </AvatarFallback>
+          <UserAvatar
+            user={user}
+            className="h-10 w-10 border hover:opacity-80 transition"
+          />
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
