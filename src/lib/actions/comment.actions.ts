@@ -64,3 +64,32 @@ export async function updateComment(
   revalidatePath(`/blog/${slug}`);
   revalidatePath("/");
 }
+
+export async function deleteComment(commentId: string, slug: string) {
+  const session = await auth();
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    throw new Error("You must be logged in to delete a comment.");
+  }
+
+  // Verify ownership
+  const existingComment = await db.query.comments.findFirst({
+    where: eq(comments.id, commentId),
+  });
+
+  if (!existingComment) {
+    throw new Error("Comment not found.");
+  }
+
+  if (existingComment.authorId !== userId) {
+    throw new Error("You are not authorized to delete this comment.");
+  }
+
+  // Delete the comment
+  await db.delete(comments).where(eq(comments.id, commentId));
+
+  // Revalidate
+  revalidatePath(`/blog/${slug}`);
+  revalidatePath("/");
+}
