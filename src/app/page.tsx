@@ -3,19 +3,21 @@ import { db } from "@/db";
 import { posts } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { PostCard } from "@/components/posts/PostCard";
+import { PostOptions } from "@/components/posts/PostOptions";
 import Link from "next/link";
 
 export default async function Home() {
   const session = await auth();
-  const user = session?.user;
+  const userId = session?.user?.id; // 1. Extract userId specifically
 
   // Used db.query to easily include the author relation
   const allPosts = await db.query.posts.findMany({
     orderBy: [desc(posts.createdAt)],
     with: {
-      author: true, // fetches the author details for each post automatically
+      author: true,
     },
   });
+
   return (
     <div className="flex-1 container mx-auto py-10 px-4">
       <div className="text-center mb-10">
@@ -33,14 +35,29 @@ export default async function Home() {
       {allPosts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {allPosts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            // 3. WRAPPER DIV: Needed for positioning and grouping
+            <div key={post.id} className="relative group h-full">
+              <PostCard post={post} />
+
+              {/* 4. POST OPTIONS: Only show if current user is the author */}
+              {userId === post.authorId && (
+                <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full shadow-sm">
+                  <PostOptions
+                    postId={post.id}
+                    slug={post.slug}
+                    authorId={post.authorId}
+                    currentUserId={userId}
+                  />
+                </div>
+              )}
+            </div>
           ))}
         </div>
       ) : (
-        /* Empty State if DB is empty */
+        /* Empty State */
         <div className="text-center py-20 bg-white rounded-lg border-2 border-dashed">
           <p className="text-gray-600 mb-4">No stories yet.</p>
-          {user && (
+          {userId && (
             <Link
               href="/write"
               className="text-blue-600 hover:underline font-medium"
