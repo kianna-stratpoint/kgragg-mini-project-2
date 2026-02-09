@@ -1,8 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { formatDistanceToNow } from "date-fns"; // Optional: for "2 hours ago"
+import { formatDistanceToNow } from "date-fns";
 import { UserAvatar } from "../auth/UserAvatar";
-// If you don't have date-fns, you can just use new Date(date).toLocaleDateString()
 
 interface PostCardProps {
   post: {
