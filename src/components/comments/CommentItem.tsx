@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { updateComment } from "@/lib/actions/comment.actions";
 
 interface CommentItemProps {
   comment: {
@@ -29,7 +30,11 @@ interface CommentItemProps {
   slug: string;
 }
 
-export function CommentItem({ comment, currentUserId }: CommentItemProps) {
+export function CommentItem({
+  comment,
+  currentUserId,
+  slug,
+}: CommentItemProps) {
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
@@ -42,7 +47,7 @@ export function CommentItem({ comment, currentUserId }: CommentItemProps) {
     if (!editContent.trim()) return;
     setIsSaving(true);
     try {
-      //await updateComment(comment.id, editContent, slug);
+      await updateComment(comment.id, editContent, slug);
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to update comment", error);
