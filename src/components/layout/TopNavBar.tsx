@@ -2,18 +2,17 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { AuthButtons } from "@/components/auth/AuthButtons";
 import { UserButton } from "@/components/auth/UserButton";
-import { Menu } from "lucide-react";
+import { Sidebar } from "./SideBar";
 
 export default async function TopNavBar() {
   const session = await auth();
+  const user = session?.user;
 
   return (
-    <nav className="flex h-20 items-center justify-between border-b px-6 bg-white">
+    <nav className="sticky top-0 z-50 flex h-20 items-center justify-between border-b px-6 bg-white">
       {/* Left: Menu Icon & Logo */}
       <div className="flex items-center gap-4">
-        <button className="p-2 hover:bg-gray-100 rounded-full">
-          <Menu className="h-6 w-6" />
-        </button>
+        <Sidebar user={user} />
         <Link href="/" className="text-3xl font-bold font-playfair-display">
           shortcut
         </Link>
