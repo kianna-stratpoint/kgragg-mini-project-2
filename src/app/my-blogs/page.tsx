@@ -1,12 +1,13 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { posts } from "@/db/schema";
+import { posts, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PostCard } from "@/components/posts/PostCard";
 import { PostOptions } from "@/components/posts/PostOptions";
+import { AvatarUploader } from "@/components/ui/avatar-upload"; // Check this path matches your file
 
 export default async function MyBlogsPage() {
   const session = await auth();
@@ -16,9 +17,21 @@ export default async function MyBlogsPage() {
     redirect("/");
   }
 
-  const user = session.user;
+  // 1. Fetch fresh user data from DB
+  const dbUser = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
 
-  // 1. Fetch posts (filtering only by this user)
+  // --- FIX START ---
+  // Combine First and Last name because 'name' doesn't exist in your DB schema
+  const dbUserName = dbUser ? `${dbUser.firstName} ${dbUser.lastName}` : null;
+
+  // Fallback logic with safe optional chaining
+  const displayName = dbUserName || session?.user?.name || "User";
+  const displayImage = dbUser?.image || session?.user?.image;
+  // --- FIX END ---
+
+  // 2. Fetch posts
   const userPosts = await db.query.posts.findMany({
     where: eq(posts.authorId, userId),
     with: {
@@ -32,7 +45,7 @@ export default async function MyBlogsPage() {
     orderBy: [desc(posts.createdAt)],
   });
 
-  // 2. Calculate Stats
+  // 3. Calculate Stats
   const totalPosts = userPosts.length;
   const totalLikes = userPosts.reduce(
     (acc, post) => acc + post.reactions.length,
@@ -47,8 +60,18 @@ export default async function MyBlogsPage() {
     <div className="flex-1 container mx-auto py-10 px-4">
       {/* --- Header Section (Name & Stats) --- */}
       <div className="flex flex-col items-center text-center mb-16 space-y-6">
+        <div className="mb-2">
+          <AvatarUploader
+            user={{
+              id: userId,
+              name: displayName, // Pass the calculated name
+              image: displayImage,
+            }}
+          />
+        </div>
+
         <h1 className="text-4xl md:text-5xl font-bold font-playfair-display text-gray-900">
-          {user?.name}
+          {displayName} {/* Use the calculated variable, not user.name */}
         </h1>
 
         {/* Stats Row */}
@@ -99,13 +122,10 @@ export default async function MyBlogsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {userPosts.map((post) => (
             <div key={post.id} className="relative group">
-              {/* 1. The Reused Card Component */}
               <div className="h-full">
-                {/* Passed currentUserId so comments sidebar works here too */}
                 <PostCard post={post} currentUserId={userId} />
               </div>
 
-              {/* 2. The Edit/Delete Menu (Overlay) */}
               <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full shadow-sm">
                 <PostOptions
                   postId={post.id}
