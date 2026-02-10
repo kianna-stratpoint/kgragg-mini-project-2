@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { auth } from "@/auth";
 import { PostOptions } from "@/components/posts/PostOptions";
 import { BackLink } from "@/components/layout/BackLink";
-// 1. IMPORT THE COMMENT SIDEBAR
 import { CommentSidebar } from "@/components/comments/CommentSidebar";
+import { ReactionButton } from "@/components/reaction/ReactionButton";
 
 interface BlogPostPageProps {
   params: Promise<{
@@ -20,9 +20,10 @@ interface BlogPostPageProps {
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const session = await auth();
+  const userId = session?.user?.id;
   const { slug } = await params;
 
-  // 2. UPDATE QUERY TO FETCH COMMENTS
+  // UPDATE QUERY TO FETCH COMMENTS
   const post = await db.query.posts.findFirst({
     where: eq(posts.slug, slug),
     with: {
@@ -31,12 +32,17 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         with: { author: true }, // We need the comment author info
         orderBy: (comments, { desc }) => [desc(comments.createdAt)], // Newest first
       },
+      reactions: true,
     },
   });
 
   if (!post) {
     notFound();
   }
+
+  const userHasLiked = userId
+    ? post.reactions.some((r) => r.userId === userId)
+    : false;
 
   return (
     <article className="min-h-screen bg-white pb-20">
@@ -73,7 +79,16 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* 3. ADD THE COMMENT SIDEBAR HERE */}
+              {/* 1. REACTION BUTTON */}
+              <ReactionButton
+                postId={post.id}
+                slug={post.slug}
+                initialCount={post.reactions.length}
+                initialUserHasLiked={userHasLiked}
+                isLoggedIn={!!userId}
+              />
+
+              {/* COMMENT SIDEBAR */}
               <CommentSidebar
                 postId={post.id}
                 slug={post.slug}
@@ -89,7 +104,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 postId={post.id}
                 slug={post.slug}
                 authorId={post.authorId}
-                currentUserId={session?.user?.id}
+                currentUserId={userId}
               />
             </div>
           </div>

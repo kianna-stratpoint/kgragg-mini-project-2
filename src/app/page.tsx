@@ -13,11 +13,10 @@ export default async function Home() {
       author: true,
       comments: {
         with: { author: true },
-        // Sort comments by newest
         orderBy: (comments, { desc }) => [desc(comments.createdAt)],
       },
+      reactions: true,
     },
-    // Sort posts by newest
     orderBy: (posts, { desc }) => [desc(posts.createdAt)],
   });
 

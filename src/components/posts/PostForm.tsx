@@ -82,7 +82,7 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
         <div className="relative group">
           {imageUrl ? (
             <div className="relative w-full h-64 md:h-80 bg-gray-50 rounded-lg overflow-hidden mb-6">
-              {/* 2. UPDATED: Uses Next/Image with 'fill' and 'unoptimized' */}
+              {/* Uses Next/Image with 'fill' and 'unoptimized' */}
               <Image
                 src={imageUrl}
                 alt="Cover preview"
@@ -153,7 +153,7 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
             placeholder="What’s your commute story today?"
             defaultValue={initialData?.content}
             required
-            className="min-h-[60vh] text-xl lg:text-lg leading-relaxed text-gray-700 border-none shadow-none focus-visible:ring-0 px-0 resize-none font-serif placeholder:font-sans placeholder:text-gray-300"
+            className="min-h-[60vh] text-xl lg:text-lg leading-relaxed text-black border-none shadow-none focus-visible:ring-0 px-0 resize-none font-sans placeholder:font-sans placeholder:text-gray-300"
           />
         </div>
       </div>

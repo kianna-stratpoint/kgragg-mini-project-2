@@ -23,12 +23,11 @@ export default async function MyBlogsPage() {
     where: eq(posts.authorId, userId),
     with: {
       author: true,
-      // FIX: We must fetch the author of the comments for PostCard to work
+      reactions: true,
       comments: {
         with: { author: true },
         orderBy: (comments, { desc }) => [desc(comments.createdAt)],
       },
-      reactions: true,
     },
     orderBy: [desc(posts.createdAt)],
   });
