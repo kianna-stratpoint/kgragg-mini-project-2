@@ -5,8 +5,8 @@ import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { UserAvatar } from "../auth/UserAvatar";
 import { CommentSidebar } from "../comments/CommentSidebar";
+import { ReactionButton } from "../reaction/ReactionButton";
 
-// 1. Define the specific shape of a Comment with its Author
 interface CommentWithAuthor {
   id: string;
   content: string;
@@ -32,13 +32,18 @@ interface PostCardProps {
       lastName: string;
       image?: string | null;
     };
-    // 2. Use the specific type array instead of 'any[]'
     comments?: CommentWithAuthor[];
+    reactions: { userId: string }[];
   };
   currentUserId?: string;
 }
 
 export function PostCard({ post, currentUserId }: PostCardProps) {
+  const reactions = post.reactions || [];
+  const userHasLiked = currentUserId
+    ? reactions.some((r) => r.userId === currentUserId)
+    : false;
+
   return (
     <div className="group flex flex-col bg-white border rounded-lg overflow-hidden hover:shadow-md transition-shadow h-full relative">
       {/* WRAPPER LINK: Wraps image and text only */}
@@ -93,8 +98,16 @@ export function PostCard({ post, currentUserId }: PostCardProps) {
           </time>
         </div>
 
-        {/* COMMENT SIDEBAR TRIGGER */}
-        <div className="z-20 relative">
+        {/* LIKE AND COMMENT */}
+        <div className="z-20 relative flex items-center gap-1">
+          <ReactionButton
+            postId={post.id}
+            slug={post.slug}
+            initialCount={reactions.length}
+            initialUserHasLiked={userHasLiked}
+            isLoggedIn={!!currentUserId}
+          />
+
           <CommentSidebar
             postId={post.id}
             slug={post.slug}
