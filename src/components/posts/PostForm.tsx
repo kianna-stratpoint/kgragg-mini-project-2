@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import {
   createPost,
   updatePost,
@@ -9,9 +9,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, Image as ImageIcon } from "lucide-react";
-import Image from "next/image";
+import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ImageUpload } from "@/components/ui/image-upload";
+// 1. Import useUploadThing
+import { useUploadThing } from "@/lib/uploadthing";
 
 interface PostFormProps {
   initialData?: {
@@ -25,8 +27,20 @@ interface PostFormProps {
 
 export function PostForm({ initialData, isEditing = false }: PostFormProps) {
   const router = useRouter();
+
+  // 2. Setup UploadThing hook
+  const { startUpload } = useUploadThing("imageUploader");
+
+  // State for the preview URL (can be remote URL or local blob URL)
+  const [previewUrl, setPreviewUrl] = useState(initialData?.imageUrl || "");
+  // State for the actual File object to be uploaded
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+
   const [showImageInput, setShowImageInput] = useState(!!initialData?.imageUrl);
-  const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || "");
+
+  // We use a manual transition for the upload phase
+  const [isUploading, setIsUploading] = useState(false);
+  const [, startTransition] = useTransition();
 
   const action =
     isEditing && initialData?.id
@@ -38,30 +52,66 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
     FormData
   >(action, null);
 
+  const isLoading = isPending || isUploading;
+
+  // 3. Custom Form Submission Handler
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsUploading(true);
+
+    const formData = new FormData(e.currentTarget);
+
+    try {
+      // If there is a new file waiting to be uploaded...
+      if (fileToUpload) {
+        const uploadResponse = await startUpload([fileToUpload]);
+
+        if (!uploadResponse || uploadResponse.length === 0) {
+          throw new Error("Upload failed");
+        }
+
+        const uploadedUrl = uploadResponse[0].url;
+        // Replace the 'imageUrl' in formData with the real remote URL
+        formData.set("imageUrl", uploadedUrl);
+      } else {
+        // No new file? Use the existing preview URL (handles "keeping the same image")
+        formData.set("imageUrl", previewUrl);
+      }
+
+      // Now call the Server Action
+      startTransition(() => {
+        formAction(formData);
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      // You might want to show a toast error here
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
-    <form action={formAction} className="relative max-w-3xl mx-auto mt-8 pb-20">
+    <form
+      onSubmit={handleSubmit}
+      className="relative max-w-3xl mx-auto mt-8 pb-20"
+    >
       {/* --- Top Action Bar --- */}
       <div className="absolute -top-16 right-0 md:-right-12 lg:-right-24 flex items-center gap-2">
         <Button
           type="button"
-          onClick={() => router.back()} // Go back to previous page
+          onClick={() => router.back()}
           className="border border-black bg-white hover:bg-gray-100 text-black sm:text-sm lg:text-base"
+          disabled={isLoading}
         >
           Cancel
         </Button>
 
         <Button
           type="submit"
-          disabled={isPending}
+          disabled={isLoading}
           className="bg-black text-white hover:bg-zinc-800 sm:text-sm lg:text-base"
         >
-          {isPending
-            ? isEditing
-              ? "Updating..."
-              : "Publishing..."
-            : isEditing
-              ? "Save Changes"
-              : "Post"}
+          {isLoading ? "Publishing..." : isEditing ? "Save Changes" : "Post"}
         </Button>
       </div>
 
@@ -80,67 +130,51 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
 
         {/* --- Image Uploader Section --- */}
         <div className="relative group">
-          {imageUrl ? (
-            <div className="relative w-full h-64 md:h-80 bg-gray-50 rounded-lg overflow-hidden mb-6">
-              {/* Uses Next/Image with 'fill' and 'unoptimized' */}
-              <Image
-                src={imageUrl}
-                alt="Cover preview"
-                fill
-                className="object-cover"
-                unoptimized
-              />
+          {/* We don't need the hidden input for imageUrl anymore, we handle it in handleSubmit */}
 
-              {/* Hidden input to actually send the data */}
-              <input type="hidden" name="imageUrl" value={imageUrl} />
-
-              <button
-                type="button"
-                onClick={() => {
-                  setImageUrl("");
+          {showImageInput || previewUrl ? (
+            <div className="relative mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
+              <ImageUpload
+                previewUrl={previewUrl}
+                onFileSelect={(file) => {
+                  if (file) {
+                    // Create local preview
+                    const url = URL.createObjectURL(file);
+                    setPreviewUrl(url);
+                    setFileToUpload(file);
+                  }
+                }}
+                onClear={() => {
+                  setPreviewUrl("");
+                  setFileToUpload(null);
                   setShowImageInput(false);
                 }}
-                className="absolute top-4 right-4 bg-white/80 p-2 rounded-full hover:bg-white text-gray-700 transition-colors z-10"
-              >
-                <X className="w-4 h-4" />
-              </button>
+                disabled={isLoading}
+              />
+
+              {!previewUrl && (
+                <button
+                  type="button"
+                  onClick={() => setShowImageInput(false)}
+                  className="absolute -top-3 -right-3 bg-gray-200 p-1 rounded-full hover:bg-gray-300 text-gray-500 transition-colors z-10"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-4 h-12">
-              {!showImageInput ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowImageInput(true)}
-                  className="rounded-full border border-gray-300 text-gray-400 hover:border-gray-800 hover:text-gray-800 transition-all h-8 w-8 shrink-0"
-                  title="Add Cover Image"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              ) : (
-                <div className="flex-1 flex items-center gap-2 animate-in fade-in slide-in-from-left-4 duration-300">
-                  <div className="relative flex-1">
-                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      name="imageUrl"
-                      placeholder="Paste an image link..."
-                      className="pl-9 border-gray-200 bg-gray-50 focus-visible:ring-1 focus-visible:ring-gray-200 rounded-full"
-                      autoFocus
-                      onChange={(e) => setImageUrl(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowImageInput(false)}
-                    className="h-8 w-8 rounded-full"
-                  >
-                    <X className="w-4 h-4 text-gray-500" />
-                  </Button>
-                </div>
-              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowImageInput(true)}
+                className="rounded-full border border-gray-300 text-gray-400 hover:border-gray-800 hover:text-gray-800 transition-all h-8 w-8 shrink-0"
+                title="Add Cover Image"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+              <span className="text-gray-400 text-sm">Add cover image</span>
             </div>
           )}
         </div>

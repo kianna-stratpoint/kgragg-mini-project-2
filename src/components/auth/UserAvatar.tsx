@@ -20,7 +20,11 @@ export function UserAvatar({ user, className }: UserAvatarProps) {
 
   return (
     <Avatar className={cn("h-10 w-10", className)}>
-      <AvatarImage src={user.image || ""} alt={user.name || "User"} />
+      <AvatarImage
+        src={user?.image || ""}
+        alt={user?.name || "User"}
+        className="object-cover h-full w-full"
+      />
       <AvatarFallback className="bg-black text-white">
         {initials}
       </AvatarFallback>
