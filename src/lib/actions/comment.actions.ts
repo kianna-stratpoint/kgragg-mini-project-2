@@ -2,9 +2,10 @@
 
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { comments } from "@/db/schema";
+import { comments, posts } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { createNotification } from "@/lib/actions/notification.actions";
 
 export async function createComment(formData: FormData) {
   const session = await auth();
@@ -21,6 +22,21 @@ export async function createComment(formData: FormData) {
     postId,
     authorId: session.user.id,
   });
+
+  const post = await db.query.posts.findFirst({
+    where: eq(posts.id, postId),
+    columns: { authorId: true, title: true },
+  });
+
+  if (post) {
+    await createNotification({
+      recipientId: post.authorId,
+      senderId: session.user.id,
+      postId: postId,
+      type: "COMMENT",
+      message: `commented on your post "${post.title}"`,
+    });
+  }
 
   revalidatePath(`/blog/${slug}`); // Refresh details page
   revalidatePath("/"); // Refresh home page
