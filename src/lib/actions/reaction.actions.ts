@@ -2,9 +2,10 @@
 
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { reactions } from "@/db/schema";
+import { posts, reactions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { createNotification } from "@/lib/actions/notification.actions";
 
 export async function toggleReaction(postId: string, slug: string) {
   const session = await auth();
@@ -31,7 +32,20 @@ export async function toggleReaction(postId: string, slug: string) {
       userId,
     });
 
-    // TODO: Trigger Notification here in the future
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      columns: { authorId: true, title: true },
+    });
+
+    if (post) {
+      await createNotification({
+        recipientId: post.authorId,
+        senderId: userId,
+        postId: postId,
+        type: "REACTION",
+        message: `liked your post "${post.title}"`,
+      });
+    }
   }
 
   // 4. Revalidate to update counts
