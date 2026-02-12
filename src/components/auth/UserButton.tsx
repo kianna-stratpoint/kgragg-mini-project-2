@@ -1,0 +1,55 @@
+"use client";
+
+import { signOut } from "next-auth/react";
+import { LogOut } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/auth/UserAvatar";
+
+interface UserButtonProps {
+  user: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
+}
+
+export function UserButton({ user }: UserButtonProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="outline-none">
+        <Avatar>
+          <UserAvatar
+            user={user}
+            className="h-10 w-10 border hover:opacity-80 transition"
+          />
+        </Avatar>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {user.email}
+            </p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => signOut()}
+          className="cursor-pointer font-semibold text-red-600 focus:text-red-700"
+        >
+          <LogOut className="mr-2 h-4 w-4 text-red-600" />
+          Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}

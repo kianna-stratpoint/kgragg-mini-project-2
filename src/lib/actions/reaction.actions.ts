@@ -1,0 +1,63 @@
+"use server";
+
+import { auth } from "@/auth";
+import { db } from "@/db";
+import { posts, reactions } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import {
+  createNotification,
+  deleteNotification,
+} from "@/lib/actions/notification.actions";
+
+export async function toggleReaction(postId: string, slug: string) {
+  const session = await auth();
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    throw new Error("You must be logged in to like a post.");
+  }
+
+  // 1. Check if reaction already exists
+  const existingReaction = await db.query.reactions.findFirst({
+    where: and(eq(reactions.postId, postId), eq(reactions.userId, userId)),
+  });
+
+  const post = await db.query.posts.findFirst({
+    where: eq(posts.id, postId),
+    columns: { authorId: true, title: true },
+  });
+
+  if (!post) {
+    throw new Error("Post not found");
+  }
+
+  if (existingReaction) {
+    await db
+      .delete(reactions)
+      .where(and(eq(reactions.postId, postId), eq(reactions.userId, userId)));
+
+    await deleteNotification({
+      recipientId: post.authorId,
+      senderId: userId,
+      postId: postId,
+      type: "REACTION",
+    });
+  } else {
+    await db.insert(reactions).values({
+      postId,
+      userId,
+    });
+
+    await createNotification({
+      recipientId: post.authorId,
+      senderId: userId,
+      postId: postId,
+      type: "REACTION",
+      message: `liked your post "${post.title}"`,
+    });
+  }
+
+  revalidatePath(`/blog/${slug}`);
+  revalidatePath("/");
+}
