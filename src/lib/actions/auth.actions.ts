@@ -101,7 +101,7 @@ export async function requestPasswordReset(
       expiresAt: expiresAt,
     });
 
-    const resetLink = `http://localhost:3000/reset-password?token=${token}`;
+    const resetLink = `http://kgragg-mini-project-2.vercel.app/reset-password?token=${token}`;
 
     await resend.emails.send({
       from: "Shortcut App <onboarding@resend.dev>", // Default testing sender
