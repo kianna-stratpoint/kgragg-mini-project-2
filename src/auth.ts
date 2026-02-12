@@ -30,7 +30,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           );
 
           if (passwordsMatch) {
-            // Return user info to be stored in the session
             return {
               id: user.id,
               name: `${user.firstName} ${user.lastName}`,
@@ -46,7 +45,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    // Add User ID to the session object
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
@@ -58,8 +56,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   session: { strategy: "jwt" },
-  secret: process.env.AUTH_SECRET, // Add strictly to .env
+  secret: process.env.AUTH_SECRET,
   pages: {
-    signIn: "/", // Since we use modals, we redirect home on error to stay on the page
+    signIn: "/",
   },
 });

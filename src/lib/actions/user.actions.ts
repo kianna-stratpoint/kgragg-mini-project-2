@@ -5,6 +5,9 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { UTApi } from "uploadthing/server";
+
+const utapi = new UTApi();
 
 export async function updateUserImage(imageUrl: string) {
   const session = await auth();
@@ -19,7 +22,6 @@ export async function updateUserImage(imageUrl: string) {
       .set({ image: imageUrl })
       .where(eq(users.id, session.user.id));
 
-    // Revalidate pages where the avatar appears
     revalidatePath("/", "layout");
     revalidatePath("/my-blogs");
 
@@ -38,9 +40,24 @@ export async function deleteUserImage() {
   }
 
   try {
+    const currentUser = await db.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+      columns: {
+        image: true,
+      },
+    });
+
+    if (currentUser?.image) {
+      const imageKey = currentUser.image.split("/").pop(); // Extract key (e.g., "abc-123.jpg")
+
+      if (imageKey) {
+        await utapi.deleteFiles(imageKey);
+      }
+    }
+
     await db
       .update(users)
-      .set({ image: null }) // Set to null to remove
+      .set({ image: null })
       .where(eq(users.id, session.user.id));
 
     revalidatePath("/", "layout");

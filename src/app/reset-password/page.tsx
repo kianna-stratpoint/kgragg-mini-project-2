@@ -1,14 +1,19 @@
 import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
 import { redirect } from "next/navigation";
+import { Metadata } from "next";
 
-// 1. Make the function async
+export const metadata: Metadata = {
+  title: "Reset Password",
+  description: "Create a new password for your account.",
+};
+
 export default async function ResetPasswordPage({
   searchParams,
 }: {
-  // 2. Update the type to reflect that it's a Promise
+  // Update type to reflect that it's a Promise
   searchParams: Promise<{ token?: string }>;
 }) {
-  // 3. Await the params
+  // Await the params
   const { token } = await searchParams;
 
   if (!token) {

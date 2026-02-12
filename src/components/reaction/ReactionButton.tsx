@@ -29,13 +29,12 @@ export function ReactionButton({
   const { openModal } = useModalStore();
 
   const handleToggle = () => {
-    // 3. CHECK LOGIN STATUS
+    // CHECK LOGIN STATUS
     if (!isLoggedIn) {
       openModal("login");
       return;
     }
 
-    //Update UI immediately
     const newHasLiked = !hasLiked;
     setHasLiked(newHasLiked);
     setCount((prev) => (newHasLiked ? prev + 1 : prev - 1));

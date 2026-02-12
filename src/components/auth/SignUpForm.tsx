@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner"; // Using Sonner
+import { toast } from "sonner";
 import { useModalStore } from "@/hooks/use-modal-store";
 import { signup } from "@/lib/actions/auth.actions";
 import { SignupFormSchema } from "@/lib/definitions";
@@ -53,7 +53,7 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {/* Name Fields (Split to match DB Schema) */}
+      {/* Name Fields */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="firstName">First Name</Label>

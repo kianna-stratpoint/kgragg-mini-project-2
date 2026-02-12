@@ -4,11 +4,30 @@ import { posts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { PostForm } from "@/components/posts/PostForm";
+import { Metadata } from "next";
 
 interface EditPostPageProps {
   params: Promise<{
     slug: string;
   }>;
+}
+
+export async function generateMetadata({
+  params,
+}: EditPostPageProps): Promise<Metadata> {
+  const { slug } = await params;
+
+  const post = await db.query.posts.findFirst({
+    where: eq(posts.slug, slug),
+    columns: { title: true },
+  });
+
+  if (!post) return { title: "Post Not Found" };
+
+  return {
+    title: `Edit: ${post.title}`,
+    description: `Editing post: ${post.title}`,
+  };
 }
 
 export default async function EditPostPage({ params }: EditPostPageProps) {
@@ -17,21 +36,21 @@ export default async function EditPostPage({ params }: EditPostPageProps) {
 
   const { slug } = await params;
 
-  // 1. Fetch the existing post
+  // Fetch the existing post
   const post = await db.query.posts.findFirst({
     where: eq(posts.slug, slug),
   });
 
   if (!post) notFound();
 
-  // 2. Security Check: Ensure the logged-in user is the author
+  // Security Check: Ensure the logged-in user is the author
   if (post.authorId !== session.user.id) {
-    redirect("/"); // Or show an unauthorized error
+    redirect("/");
   }
 
   return (
     <div className="container mx-auto py-10 px-4 max-w-4xl">
-      {/* 3. Pass existing data to the form */}
+      {/* Pass existing data to the form */}
       <PostForm
         initialData={{
           id: post.id,

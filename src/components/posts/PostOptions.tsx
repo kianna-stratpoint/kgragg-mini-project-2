@@ -41,7 +41,6 @@ export function PostOptions({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // If the user is not the author, do not render anything
   if (authorId !== currentUserId) return null;
 
   async function handleDelete() {
@@ -51,7 +50,7 @@ export function PostOptions({
       toast.success("Post deleted successfully");
 
       router.push("/");
-      router.refresh(); // Ensure the home page data is fresh
+      router.refresh();
     } catch (error) {
       console.error("Error deleting post:", error);
       toast.error("Failed to delete post");
