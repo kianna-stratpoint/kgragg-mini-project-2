@@ -2,10 +2,10 @@
 
 import { db } from "@/db";
 import { notifications } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-// 1. Fetch Notifications for the current user
+// 1. Fetch Notifications
 export async function getUserNotifications(userId: string) {
   try {
     const data = await db.query.notifications.findMany({
@@ -29,9 +29,13 @@ export async function getUserNotifications(userId: string) {
       },
     });
 
-    const unreadCount = data.filter((n) => !n.isRead).length;
+    const validNotifications = data.filter(
+      (n) => n.post !== null && n.sender !== null,
+    );
 
-    return { notifications: data, unreadCount };
+    const unreadCount = validNotifications.filter((n) => !n.isRead).length;
+
+    return { notifications: validNotifications, unreadCount };
   } catch (error) {
     console.error("Error fetching notifications:", error);
     return { notifications: [], unreadCount: 0 };
@@ -49,20 +53,6 @@ export async function markNotificationAsRead(notificationId: string) {
     revalidatePath("/");
   } catch (error) {
     console.error("Error marking notification as read:", error);
-  }
-}
-
-// 3. Mark ALL as read
-export async function markAllNotificationsAsRead(userId: string) {
-  try {
-    await db
-      .update(notifications)
-      .set({ isRead: true })
-      .where(eq(notifications.recipientId, userId));
-
-    revalidatePath("/");
-  } catch (error) {
-    console.error("Error marking all as read", error);
   }
 }
 
@@ -92,5 +82,34 @@ export async function createNotification({
     });
   } catch (error) {
     console.error("Error creating notification:", error);
+  }
+}
+
+export async function deleteNotification({
+  recipientId,
+  senderId,
+  postId,
+  type,
+}: {
+  recipientId: string;
+  senderId: string;
+  postId: string;
+  type: "COMMENT" | "REACTION";
+}) {
+  try {
+    if (recipientId === senderId) return;
+
+    await db
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.recipientId, recipientId),
+          eq(notifications.senderId, senderId),
+          eq(notifications.postId, postId),
+          eq(notifications.type, type),
+        ),
+      );
+  } catch (error) {
+    console.error("Error deleting notification:", error);
   }
 }

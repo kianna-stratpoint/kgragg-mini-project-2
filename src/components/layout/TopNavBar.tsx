@@ -6,7 +6,6 @@ import { eq } from "drizzle-orm";
 import { AuthButtons } from "@/components/auth/AuthButtons";
 import { UserButton } from "@/components/auth/UserButton";
 import { Sidebar } from "./SideBar";
-// 1. ADD 'type NotificationItem' to this import
 import {
   NotificationBell,
   type NotificationItem,
@@ -51,7 +50,6 @@ export default async function TopNavBar() {
         {user ? (
           <>
             <NotificationBell
-              // 2. REMOVE userId={user.id} from here
               unreadCount={notificationsData.unreadCount}
               data={notificationsData.notifications}
             />

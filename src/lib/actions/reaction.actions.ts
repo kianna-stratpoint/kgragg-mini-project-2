@@ -5,7 +5,10 @@ import { db } from "@/db";
 import { posts, reactions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { createNotification } from "@/lib/actions/notification.actions";
+import {
+  createNotification,
+  deleteNotification,
+} from "@/lib/actions/notification.actions";
 
 export async function toggleReaction(postId: string, slug: string) {
   const session = await auth();
@@ -20,35 +23,41 @@ export async function toggleReaction(postId: string, slug: string) {
     where: and(eq(reactions.postId, postId), eq(reactions.userId, userId)),
   });
 
+  const post = await db.query.posts.findFirst({
+    where: eq(posts.id, postId),
+    columns: { authorId: true, title: true },
+  });
+
+  if (!post) {
+    throw new Error("Post not found");
+  }
+
   if (existingReaction) {
-    // 2. If exists, REMOVE it (Unlike)
     await db
       .delete(reactions)
       .where(and(eq(reactions.postId, postId), eq(reactions.userId, userId)));
+
+    await deleteNotification({
+      recipientId: post.authorId,
+      senderId: userId,
+      postId: postId,
+      type: "REACTION",
+    });
   } else {
-    // 3. If not exists, ADD it (Like)
     await db.insert(reactions).values({
       postId,
       userId,
     });
 
-    const post = await db.query.posts.findFirst({
-      where: eq(posts.id, postId),
-      columns: { authorId: true, title: true },
+    await createNotification({
+      recipientId: post.authorId,
+      senderId: userId,
+      postId: postId,
+      type: "REACTION",
+      message: `liked your post "${post.title}"`,
     });
-
-    if (post) {
-      await createNotification({
-        recipientId: post.authorId,
-        senderId: userId,
-        postId: postId,
-        type: "REACTION",
-        message: `liked your post "${post.title}"`,
-      });
-    }
   }
 
-  // 4. Revalidate to update counts
   revalidatePath(`/blog/${slug}`);
   revalidatePath("/");
 }
