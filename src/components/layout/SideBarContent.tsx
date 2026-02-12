@@ -8,7 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 interface SidebarContentProps {
   user?: User;
-  onNavigate?: () => void; // Optional callback to close the sheet on mobile
+  onNavigate?: () => void;
 }
 
 export function SidebarContent({ user, onNavigate }: SidebarContentProps) {

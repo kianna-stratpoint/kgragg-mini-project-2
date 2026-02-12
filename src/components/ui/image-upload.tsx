@@ -17,7 +17,6 @@ export const ImageUpload = ({
   onClear,
   disabled,
 }: ImageUploadProps) => {
-  // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -33,6 +32,8 @@ export const ImageUpload = ({
           src={previewUrl}
           alt="Upload preview"
           className="object-cover"
+          loading="lazy"
+          sizes="w-auto h-auto"
         />
         <Button
           onClick={onClear}

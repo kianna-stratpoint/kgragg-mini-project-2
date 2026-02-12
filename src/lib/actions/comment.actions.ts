@@ -5,7 +5,10 @@ import { db } from "@/db";
 import { comments, posts } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
-import { createNotification } from "@/lib/actions/notification.actions";
+import {
+  createNotification,
+  deleteNotification,
+} from "@/lib/actions/notification.actions";
 
 export async function createComment(formData: FormData) {
   const session = await auth();
@@ -17,17 +20,20 @@ export async function createComment(formData: FormData) {
 
   if (!content || !postId) return;
 
+  // Insert Comment
   await db.insert(comments).values({
     content,
     postId,
     authorId: session.user.id,
   });
 
+  // Fetch Post to get Author ID for notification
   const post = await db.query.posts.findFirst({
     where: eq(posts.id, postId),
     columns: { authorId: true, title: true },
   });
 
+  // Create Notification
   if (post) {
     await createNotification({
       recipientId: post.authorId,
@@ -38,10 +44,11 @@ export async function createComment(formData: FormData) {
     });
   }
 
-  revalidatePath(`/blog/${slug}`); // Refresh details page
-  revalidatePath("/"); // Refresh home page
+  revalidatePath(`/blog/${slug}`);
+  revalidatePath("/");
 }
 
+// 2. UPDATE COMMENT
 export async function updateComment(
   commentId: string,
   content: string,
@@ -76,11 +83,12 @@ export async function updateComment(
     })
     .where(eq(comments.id, commentId));
 
-  // 3. Revalidate paths to show changes immediately
+  // Revalidate paths
   revalidatePath(`/blog/${slug}`);
   revalidatePath("/");
 }
 
+// 3. DELETE COMMENT
 export async function deleteComment(commentId: string, slug: string) {
   const session = await auth();
   const userId = session?.user?.id;
@@ -102,8 +110,22 @@ export async function deleteComment(commentId: string, slug: string) {
     throw new Error("You are not authorized to delete this comment.");
   }
 
-  // Delete the comment
+  // Delete the comment from DB
   await db.delete(comments).where(eq(comments.id, commentId));
+
+  const post = await db.query.posts.findFirst({
+    where: eq(posts.id, existingComment.postId),
+    columns: { authorId: true },
+  });
+
+  if (post) {
+    await deleteNotification({
+      recipientId: post.authorId,
+      senderId: userId,
+      postId: existingComment.postId,
+      type: "COMMENT",
+    });
+  }
 
   // Revalidate
   revalidatePath(`/blog/${slug}`);

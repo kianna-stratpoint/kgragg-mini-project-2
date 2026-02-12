@@ -1,25 +1,25 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
-import { auth } from "@/auth"; // Your existing auth helper
+import { auth } from "@/auth";
 
 const f = createUploadthing();
 
 export const ourFileRouter = {
-  // Define a route for "imageUploader"
+  // Define route for "imageUploader"
   imageUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
     .middleware(async () => {
-      // This code runs on your server before upload
+      // Runs on server before upload
       const session = await auth();
       if (!session?.user) throw new Error("Unauthorized");
 
-      // Whatever is returned here is accessible in onUploadComplete as `metadata`
+      // Accessible in onUploadComplete as `metadata`
       return { userId: session.user.id };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      // This code RUNS ON YOUR SERVER after upload
+      // This code RUNS ON SERVER after upload
       console.log("Upload complete for userId:", metadata.userId);
       console.log("file url", file.url);
 
-      // !!! return the URL to the client !!!
+      // Returns the URL
       return { uploadedBy: metadata.userId, url: file.url };
     }),
 } satisfies FileRouter;

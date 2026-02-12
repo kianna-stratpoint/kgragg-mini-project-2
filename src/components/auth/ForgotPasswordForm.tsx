@@ -22,7 +22,7 @@ export function ForgotPasswordForm() {
     try {
       await requestPasswordReset(null, formData);
       toast.success("Check your email for the reset link!");
-      openModal("login"); // Return to login screen
+      openModal("login");
     } catch (error) {
       console.error("Password reset error:", error);
       toast.error("Something went wrong. Please try again.");

@@ -3,6 +3,7 @@
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -29,6 +30,7 @@ interface CommentSidebarProps {
   slug: string;
   comments: Comment[];
   currentUserId?: string;
+  postAuthorId: string;
 }
 
 export function CommentSidebar({
@@ -36,6 +38,7 @@ export function CommentSidebar({
   slug,
   comments,
   currentUserId,
+  postAuthorId,
 }: CommentSidebarProps) {
   return (
     <Sheet>
@@ -52,6 +55,10 @@ export function CommentSidebar({
           <SheetTitle className="font-playfair-display text-2xl">
             Comments ({comments.length})
           </SheetTitle>
+
+          <SheetDescription className="sr-only">
+            Discussion thread for this post. View and reply to comments.
+          </SheetDescription>
         </SheetHeader>
 
         <ScrollArea className="flex-1 px-6">
@@ -63,6 +70,7 @@ export function CommentSidebar({
                   comment={comment}
                   slug={slug}
                   currentUserId={currentUserId}
+                  postAuthorId={postAuthorId}
                 />
               ))
             ) : (

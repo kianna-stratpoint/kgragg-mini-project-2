@@ -19,10 +19,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
   useEffect(() => {
     if (state?.success) {
       toast.success("Password reset successfully!");
-      router.push("/"); // Go to home
-      setTimeout(() => openModal("login"), 500); // Open login modal
+      router.push("/");
+      setTimeout(() => openModal("login"), 500);
     } else if (state?.message) {
-      // Show error if it's not a success message
       toast.error(state.message);
     }
   }, [state, router, openModal]);

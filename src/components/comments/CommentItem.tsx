@@ -37,12 +37,14 @@ interface CommentItemProps {
     };
   };
   currentUserId?: string;
+  postAuthorId: string;
   slug: string;
 }
 
 export function CommentItem({
   comment,
   currentUserId,
+  postAuthorId,
   slug,
 }: CommentItemProps) {
   // --- STATE MANAGEMENT ---
@@ -56,6 +58,8 @@ export function CommentItem({
 
   // Check if the current user owns this comment
   const isOwner = currentUserId === comment.author.id;
+
+  const isPostAuthor = comment.author.id === postAuthorId;
 
   // --- HANDLERS ---
   const handleSave = async () => {
@@ -95,9 +99,18 @@ export function CommentItem({
         />
         <div className="flex-1 space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-900">
-              {comment.author.firstName} {comment.author.lastName}
-            </span>
+            {/* NAME + AUTHOR BADGE WRAPPER */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-gray-900">
+                {comment.author.firstName} {comment.author.lastName}
+              </span>
+
+              {isPostAuthor && (
+                <span className="bg-white text-black text-[12px] px-2 py-0.5 font-semibold tracking-wide border rounded-sm border-gray-400">
+                  Author
+                </span>
+              )}
+            </div>
 
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500">
@@ -106,7 +119,7 @@ export function CommentItem({
                 })}
               </span>
 
-              {/* Options Menu (Only for Owner) */}
+              {/* Comment Options Menu */}
               {isOwner && !isEditing && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

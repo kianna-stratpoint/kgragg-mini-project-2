@@ -19,7 +19,6 @@ export async function signup(
   prevState: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  // 1. Validate Form Fields using Zod
   const validatedFields = SignupFormSchema.safeParse({
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
@@ -28,7 +27,6 @@ export async function signup(
     confirmPassword: formData.get("confirmPassword"),
   });
 
-  // If validation fails, return errors to the UI
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
@@ -39,7 +37,6 @@ export async function signup(
   const { email, password, firstName, lastName } = validatedFields.data;
 
   try {
-    // 2. Check if user already exists
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, email),
     });
@@ -51,10 +48,8 @@ export async function signup(
       };
     }
 
-    // 3. Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4. Insert into Database
     await db.insert(users).values({
       firstName,
       lastName,
@@ -62,7 +57,6 @@ export async function signup(
       passwordHash: hashedPassword,
     });
 
-    // 5. Success (We don't redirect here because we want the UI to switch to Login Modal)
     return { message: "Account created successfully!" };
   } catch (error) {
     console.error("Create account failed:", error);
@@ -89,7 +83,6 @@ export async function requestPasswordReset(
 
   const { email } = validatedFields.data;
 
-  // 1. Check if user exists
   const user = await db.query.users.findFirst({
     where: eq(users.email, email),
   });
@@ -99,18 +92,15 @@ export async function requestPasswordReset(
   }
 
   try {
-    // 2. Generate Token
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
 
-    // 3. Save to DB
     await db.insert(passwordResets).values({
       userId: user.id,
       token: token,
       expiresAt: expiresAt,
     });
 
-    // 4. SEND EMAIL using Resend
     const resetLink = `http://localhost:3000/reset-password?token=${token}`;
 
     await resend.emails.send({
@@ -133,7 +123,6 @@ export async function requestPasswordReset(
 export async function resetPassword(prevState: FormState, formData: FormData) {
   const token = formData.get("token") as string;
 
-  // 1. Validate Password format
   const validatedFields = ResetPasswordSchema.safeParse({
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
@@ -148,12 +137,10 @@ export async function resetPassword(prevState: FormState, formData: FormData) {
 
   const { password } = validatedFields.data;
 
-  // 2. Find the valid reset token in DB
   const resetRecord = await db.query.passwordResets.findFirst({
     where: eq(passwordResets.token, token),
   });
 
-  // 3. Validation Checks
   if (!resetRecord) {
     return { message: "Invalid or expired reset token." };
   }
@@ -163,7 +150,6 @@ export async function resetPassword(prevState: FormState, formData: FormData) {
     return { message: "This reset link has expired." };
   }
 
-  // 4. Update User's Password
   const hashedPassword = await bcrypt.hash(password, 10);
 
   await db
@@ -171,7 +157,6 @@ export async function resetPassword(prevState: FormState, formData: FormData) {
     .set({ passwordHash: hashedPassword })
     .where(eq(users.id, resetRecord.userId));
 
-  // 5. Delete the used token (Security best practice)
   await db.delete(passwordResets).where(eq(passwordResets.id, resetRecord.id));
 
   return { success: true, message: "Password updated successfully!" };

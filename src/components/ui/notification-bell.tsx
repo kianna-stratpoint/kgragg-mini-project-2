@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Heart, MessageCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,9 +13,9 @@ import {
 import { markNotificationAsRead } from "@/lib/actions/notification.actions";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { UserAvatar } from "@/components/auth/UserAvatar"; // Use the component we made!
+import { UserAvatar } from "@/components/auth/UserAvatar";
+import { cn } from "@/lib/utils";
 
-// 1. Define the notification shape explicitly
 export interface NotificationItem {
   id: string;
   isRead: boolean;
@@ -33,7 +33,6 @@ export interface NotificationItem {
 }
 
 export interface NotificationBellProps {
-  // We'll remove userId since it's unused, or prefix with _ to ignore
   unreadCount: number;
   data: NotificationItem[];
 }
@@ -47,7 +46,7 @@ export function NotificationBell({
   const [optimisticCount, setOptimisticCount] = useState(initialCount);
   const [notifications, setNotifications] = useState<NotificationItem[]>(data);
 
-  // 2. Use the interface for the parameter
+  // Interface for the parameter
   const handleNotificationClick = async (notification: NotificationItem) => {
     if (!notification.isRead) {
       setOptimisticCount((prev) => Math.max(0, prev - 1));
@@ -102,14 +101,38 @@ export function NotificationBell({
                 !notification.isRead ? "bg-blue-50/50" : ""
               }`}
             >
-              {/* 3. Using the shared UserAvatar component for consistency */}
-              <UserAvatar
-                user={{
-                  name: `${notification.sender?.firstName} ${notification.sender?.lastName}`,
-                  image: notification.sender?.image,
-                }}
-                className="w-8 h-8 mt-1"
-              />
+              <div className="relative w-12 h-12 mt-1 shrink-0">
+                <UserAvatar
+                  user={{
+                    name: `${notification.sender?.firstName} ${notification.sender?.lastName}`,
+                    image: notification.sender?.image,
+                  }}
+                  className="w-12 h-12"
+                />
+
+                {/* Notification Type Badge */}
+                <div
+                  className={cn(
+                    "absolute -bottom-0.5 -right-0.5 flex items-center justify-center",
+                    "w-5 h-5 rounded-full ring-2 ring-white",
+                    notification.type === "COMMENT"
+                      ? "bg-blue-500"
+                      : "bg-red-500",
+                  )}
+                >
+                  {notification.type === "COMMENT" ? (
+                    <MessageCircle
+                      className="w-2.5 h-2.5 text-white"
+                      strokeWidth={2.5}
+                    />
+                  ) : (
+                    <Heart
+                      className="w-2.5 h-2.5 text-white fill-white"
+                      strokeWidth={2.5}
+                    />
+                  )}
+                </div>
+              </div>
 
               <div className="flex flex-col gap-1">
                 <p className="text-sm leading-snug text-gray-800">
@@ -118,11 +141,16 @@ export function NotificationBell({
                     {notification.sender?.lastName}
                   </span>{" "}
                   {notification.type === "COMMENT" ? "commented on" : "liked"}{" "}
-                  <span className="font-medium text-blue-600">
+                  <span className="font-medium text-black">
                     &quot;{notification.post?.title || "your post"}&quot;
                   </span>
                 </p>
-                <span className="text-xs text-gray-500">
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    !notification.isRead ? "text-blue-600" : "text-gray-400",
+                  )}
+                >
                   {notification.createdAt
                     ? formatDistanceToNow(new Date(notification.createdAt), {
                         addSuffix: true,
