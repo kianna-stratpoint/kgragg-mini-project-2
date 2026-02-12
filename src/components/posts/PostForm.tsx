@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import {
+  useActionState,
+  useState,
+  useTransition,
+  useRef,
+  useEffect,
+} from "react";
 import {
   createPost,
   updatePost,
@@ -8,39 +14,36 @@ import {
 } from "@/lib/actions/post.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ImageUpload } from "@/components/ui/image-upload";
-// 1. Import useUploadThing
 import { useUploadThing } from "@/lib/uploadthing";
+import TiptapEditor from "@/components/posts/TipTapEditor";
+import { toast } from "sonner";
 
 interface PostFormProps {
   initialData?: {
     id: string;
     title: string;
     content: string;
-    imageUrl: string;
+    imageUrl: string | null;
   };
   isEditing?: boolean;
 }
 
 export function PostForm({ initialData, isEditing = false }: PostFormProps) {
   const router = useRouter();
-
-  // 2. Setup UploadThing hook
   const { startUpload } = useUploadThing("imageUploader");
 
-  // State for the preview URL (can be remote URL or local blob URL)
+  const [content, setContent] = useState(initialData?.content || "");
   const [previewUrl, setPreviewUrl] = useState(initialData?.imageUrl || "");
-  // State for the actual File object to be uploaded
+  const [showImageInput, setShowImageInput] = useState(!!initialData?.imageUrl);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
 
-  const [showImageInput, setShowImageInput] = useState(!!initialData?.imageUrl);
-
-  // We use a manual transition for the upload phase
   const [isUploading, setIsUploading] = useState(false);
   const [, startTransition] = useTransition();
+
+  const isSubmittingRef = useRef(false);
 
   const action =
     isEditing && initialData?.id
@@ -54,16 +57,24 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
 
   const isLoading = isPending || isUploading;
 
-  // 3. Custom Form Submission Handler
+  useEffect(() => {
+    if (!isPending) {
+      isSubmittingRef.current = false;
+    }
+  }, [isPending]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsUploading(true);
+
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     const formData = new FormData(e.currentTarget);
+    formData.set("content", content);
 
-    try {
-      // If there is a new file waiting to be uploaded...
-      if (fileToUpload) {
+    if (fileToUpload) {
+      setIsUploading(true);
+      try {
         const uploadResponse = await startUpload([fileToUpload]);
 
         if (!uploadResponse || uploadResponse.length === 0) {
@@ -71,23 +82,22 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
         }
 
         const uploadedUrl = uploadResponse[0].url;
-        // Replace the 'imageUrl' in formData with the real remote URL
         formData.set("imageUrl", uploadedUrl);
-      } else {
-        // No new file? Use the existing preview URL (handles "keeping the same image")
-        formData.set("imageUrl", previewUrl);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        toast.error("Failed to upload image. Please try again.");
+        setIsUploading(false);
+        isSubmittingRef.current = false;
+        return;
       }
-
-      // Now call the Server Action
-      startTransition(() => {
-        formAction(formData);
-      });
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      // You might want to show a toast error here
-    } finally {
-      setIsUploading(false);
+    } else {
+      formData.set("imageUrl", previewUrl || "");
     }
+
+    startTransition(() => {
+      formAction(formData);
+      setIsUploading(false);
+    });
   };
 
   return (
@@ -95,7 +105,6 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
       onSubmit={handleSubmit}
       className="relative max-w-3xl mx-auto mt-8 pb-20"
     >
-      {/* --- Top Action Bar --- */}
       <div className="absolute -top-16 right-0 md:-right-12 lg:-right-24 flex items-center gap-2">
         <Button
           type="button"
@@ -116,7 +125,6 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
       </div>
 
       <div className="space-y-6">
-        {/* --- Title Input --- */}
         <div className="group">
           <Input
             id="title"
@@ -128,19 +136,15 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
           />
         </div>
 
-        {/* --- Image Uploader Section --- */}
         <div className="relative group">
-          {/* We don't need the hidden input for imageUrl anymore, we handle it in handleSubmit */}
-
           {showImageInput || previewUrl ? (
             <div className="relative mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
               <ImageUpload
                 previewUrl={previewUrl}
-                onFileSelect={(file) => {
+                onFileSelect={(file: File | null) => {
                   if (file) {
-                    // Create local preview
-                    const url = URL.createObjectURL(file);
-                    setPreviewUrl(url);
+                    const objectUrl = URL.createObjectURL(file);
+                    setPreviewUrl(objectUrl);
                     setFileToUpload(file);
                   }
                 }}
@@ -151,16 +155,6 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
                 }}
                 disabled={isLoading}
               />
-
-              {!previewUrl && (
-                <button
-                  type="button"
-                  onClick={() => setShowImageInput(false)}
-                  className="absolute -top-3 -right-3 bg-gray-200 p-1 rounded-full hover:bg-gray-300 text-gray-500 transition-colors z-10"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
             </div>
           ) : (
             <div className="flex items-center gap-4 h-12">
@@ -179,15 +173,10 @@ export function PostForm({ initialData, isEditing = false }: PostFormProps) {
           )}
         </div>
 
-        {/* --- Content Textarea --- */}
         <div>
-          <Textarea
-            id="content"
-            name="content"
-            placeholder="What’s your commute story today?"
-            defaultValue={initialData?.content}
-            required
-            className="min-h-[60vh] text-xl lg:text-lg leading-relaxed text-black border-none shadow-none focus-visible:ring-0 px-0 resize-none font-sans placeholder:font-sans placeholder:text-gray-300"
+          <TiptapEditor
+            content={content}
+            onChange={(newContent) => setContent(newContent)}
           />
         </div>
       </div>
