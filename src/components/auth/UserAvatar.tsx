@@ -18,16 +18,21 @@ export function UserAvatar({ user, className }: UserAvatarProps) {
         .toUpperCase()
     : "U";
 
+  const safeImage = user.image?.trim() ? user.image : null;
+
   return (
     <Avatar className={cn("h-10 w-10", className)}>
-      <AvatarImage
-        src={user?.image || ""}
-        alt={user?.name || "User"}
-        className="object-cover h-full w-full"
-      />
-      <AvatarFallback className="bg-black text-white">
-        {initials}
-      </AvatarFallback>
+      {safeImage ? (
+        <AvatarImage
+          src={safeImage}
+          alt={user.name || "User"}
+          className="object-cover h-full w-full"
+        />
+      ) : (
+        <AvatarFallback className="bg-black text-white">
+          {initials}
+        </AvatarFallback>
+      )}
     </Avatar>
   );
 }
